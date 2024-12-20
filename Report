@@ -1,12 +1,203 @@
-## Introduction 
+# Analyzing the Regional Differences in Media Coverage of M&A Deals
 
-Mergers and acquisitions (M&A) are very important events that have the potential to shape global markets, influence corporate strategies, and force regulators to act. The media plays a crucial role in framing these deals, they do so by influencing public perception and what this project hinges upon is that the media also reflects regional economic and regulatory priorities. This project examines the regional differences in media coverage of high-profile M&A deals between the United States and Europe, focusing on how narratives vary across these two massive and very active M&A markets. 
+### Introduction 
+
+Mergers and acquisitions (M&A) are very important events that have the potential to shape global markets, influence corporate strategies, and sometimes these are the very things that get regulators to act. The media plays a crucial role in framing these deals, they do so by influencing public perception and potentially also reflecting regional economic and regulatory priorities. This project examines the regional differences in media coverage of high-profile M&A deals that took place between 2015-2020 in both the United States and Europe, focusing on how narratives vary across these two massive and very active M&A markets. 
+
 The public policy rationale for doing this project stems from the need to understand how and to what extent regional media perspectives align with local priorities. With globalization driving cross-border M&A deals, these insights can be important tools for analysis for policymakers and they can be crucial for corporate strategists navigating the distinct regulatory and public environments in the U.S. and Europe.
-This study contributes to understanding regional narratives by systematically analysing media language and themes. I have hypothesised that U.S. media focuses on competitive advantages and shareholder value, reflecting the country’s business-centric culture, while European media emphasizes regulatory hurdles and industrial impacts, consistent with stricter oversight and policy-driven priorities.
 
-## Methodology
+ I have hypothesised that U.S. media focuses on competitive advantages and shareholder value, reflecting the country’s business-centric culture, while European media emphasizes regulatory hurdles and industrial impacts, consistent with stricter oversight and policy-driven priorities.
 
-## Data Processing
-## Data Analysis 
-## Results 
-## Conclusion 
+### Methodology
+
+
+This project involved a structured approach to collecting, processing, and analysing media articles related to high-profile M&A deals from 2015 to 2020. I had initially wanted to analyse the highest-profile deals in those years, however after doing some research I found that there was very limited coverage by European sources, if the M&A deal involved only American companies. Thus, I had to switch gears and I picked deals that were cross-regional. 
+
+After picking five 5 large M&A deals, I began Google searching articles on those deals and I was able to find an average of 6.4 for each deal. I saved all the articles in PDF format (this was necessary as some sources were behind paywalls) and labelled the file title to include both the name of the newspaper (e.g., Reuters, WSJ) and its regional classification—marked as either "US" for American sources (e.g., New York Times, WSJ) or "Europe" for European sources (e.g., Financial Times, The Guardian). This labelling system allowed for clear regional distinctions and would later be useful for the generational of a metadata. 
+
+Once the articles were saved, their content was converted into raw text using Python’s PyMuPDF library. The extracted text retained the regional classification embedded in the file titles, enabling straightforward categorization of articles by their origin. To enhance the analysis, I automated metadata generation for each article, assigning a “U.S.” or “Europe” label based on the file name. This metadata provided a foundation for regional comparisons throughout the project and eliminated any ambiguity in the dataset.
+
+Once I had converted the PDF information into a processable text format, I began cleaning the text. I used regular expressions (Regex), to remove boilerplate text, advertisements, and other extraneous patterns. I further cleaned the text by applying NLTK to remove stopwords and tokenize the content, breaking it into manageable units for analysis. To make sure that I was able to concentrate the analysis on the broader language and narratives used in the media I also filtered out specific company names (e.g., Siemens, Shire, Baxalta) as well as deal-specific terms.
+
+### Data Processing Code
+
+Here is the code that I, with the help of ChatGPT 4, wrote in order to process and later clean the text.
+
+```python
+from google.colab import drive
+drive.mount('/content/drive')
+
+import os
+
+project_path = '/content/drive/MyDrive/Project'
+os.chdir(project_path)
+
+output_path = '/content/drive/MyDrive/Project/Processed'
+os.chdir(output_path)
+
+raw_data_path = '/content/drive/MyDrive/Project/Raw'
+os.chdir(raw_data_path)
+
+!pip install pymupdf
+import os
+import fitz  # PyMuPDF
+import nltk
+import re
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+
+nltk.download('stopwords')
+nltk.download('punkt')
+
+import os
+import fitz  # PyMuPDF
+
+# Function to extract text from a PDF
+def extract_text_from_pdf(pdf_path):
+    with fitz.open(pdf_path) as pdf:
+        text = ""
+        for page in pdf:
+            text += page.get_text()
+    return text
+
+# Loop through all subfolders and process PDFs
+for folder in os.listdir(raw_data_path):
+    folder_path = os.path.join(raw_data_path, folder)
+    if os.path.isdir(folder_path):  # Check if it's a folder
+        print(f"Checking folder: {folder}")
+
+        for file in os.listdir(folder_path):
+            if file.endswith('.pdf'):  # Only process PDFs
+                pdf_path = os.path.join(folder_path, file)
+                print(f"Processing: {pdf_path}")
+
+                # Extract text from PDF
+                text = extract_text_from_pdf(pdf_path)
+
+                # Save extracted text to a .txt file in Processed Data
+                output_file = os.path.join(output_path, f"{folder}_{file.replace('.pdf', '.txt')}")
+                with open(output_file, 'w', encoding='utf-8') as f:
+                    f.write(text)
+
+                print(f"Processed and saved: {output_file}")
+
+print("Text extraction complete! Check the 'Processed Data' folder.")
+
+!pip install nltk
+import nltk
+nltk.download('punkt_tab')
+import os
+import re
+import pandas as pd
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+import nltk
+
+nltk.download('stopwords')
+nltk.download('punkt')
+
+# Set folder paths
+processed_data_path = '/content/drive/MyDrive/Project/Processed'
+cleaned_data_path = '/content/drive/MyDrive/Project/Cleaned'
+
+# Create cleaned data folder if it doesn’t exist
+os.makedirs(cleaned_data_path, exist_ok=True)
+
+# Define irrelevant patterns to remove
+irrelevant_patterns = [
+    r'www\.\S+', r'subscribe now', r'advertisement', r'page \d+ of \d+',
+    r'share this article', r'\brelated articles\b', r'© \d{4}.*', r'visit.*',
+    r'home', r'compute', r'store', r'connect', r'control', r'code', r'ai',
+    r'hpc', r'enterprise', r'hyperscale', r'cloud', r'edge', r'latest',
+    r'reject all', r'accept all cookies', r'industry news', r'health care.*',
+    r'rare diseases', r'systemic conditions', r'privacy policy', r'get started',
+    r'opted in', r'newsrooms.*', r'company news.*', r'featured.*', r'https.*', r'id.*',
+    r'adgt.*', r'ge.*', r'adgt.*', r'oil.*', r'gas.*', r'mer.*', r'baxalta.*', r'monsanto.*', r'steam.*',
+    r'en.*', r'bayer.*', r'og.*', r'trns.*', r'bn.*', r'sd.*', r'basf.*'
+]
+
+# Define keywords for sources and regions
+source_region_map = {
+    "federal register": "US", "reuters": "Europe", "ec": "Europe", "powermagazine": "US",
+    "europetrole": "Europe", "corporate europe observatory": "Europe", "washington post": "US",
+    "wsj": "US", "der spiegel": "Europe", "sec": "US", "white paper": "US", "bbc": "Europe",
+    "next platform": "US", "the street": "US", "the guardian": "US", "telegraph": "Europe",
+    "ft": "Europe", "chicago tribune": "US", "prnewswire": "US", "gen": "Both", "iflr": "US",
+    "case eu": "Europe", "new york times": "US", "financier worldwide": "US"
+}
+
+# Function to clean text
+def clean_text(text):
+    text = text.lower()
+    for pattern in irrelevant_patterns:
+        text = re.sub(pattern, '', text)
+    text = re.sub(r'[^a-zA-Z\s]', '', text)
+    tokens = word_tokenize(text)
+    stop_words = set(stopwords.words('english'))
+    tokens = [word for word in tokens if word not in stop_words]
+    return " ".join(tokens)
+
+# Function to determine region and source from filename or content
+def determine_region_and_source(filename):
+    filename_lower = filename.lower()
+    for keyword, region in source_region_map.items():
+        if keyword in filename_lower:
+            return region, keyword.title()
+    return "Unknown", "Unknown"
+
+# Clean all text files and store metadata
+cleaned_files_data = []
+
+for file in os.listdir(processed_data_path):
+    if file.endswith('.txt'):
+        file_path = os.path.join(processed_data_path, file)
+
+        # Determine region and source
+        region, source = determine_region_and_source(file)
+
+        # Read and clean text
+        with open(file_path, 'r', encoding='utf-8') as f:
+            raw_text = f.read()
+        cleaned_text = clean_text(raw_text)
+
+        # Save cleaned text to new file
+        cleaned_file_name = f"cleaned_{file}"
+        cleaned_file_path = os.path.join(cleaned_data_path, cleaned_file_name)
+        with open(cleaned_file_path, 'w', encoding='utf-8') as f:
+            f.write(cleaned_text)
+
+        # Add metadata
+        cleaned_files_data.append({
+            'File Name': file,
+            'Source': source,
+            'Region': region,
+            'Cleaned File Path': cleaned_file_path,
+            'Text Length': len(cleaned_text.split())
+        })
+        print(f"Cleaned and saved: {cleaned_file_path}")
+
+# Save metadata to CSV
+df = pd.DataFrame(cleaned_files_data)
+df.to_csv(os.path.join(cleaned_data_path, 'cleaned_data_metadata.csv'), index=False)
+
+print("Text cleaning complete! Check the 'Cleaned Data' folder and metadata CSV.")
+
+  ```
+
+### Data Analysis
+
+ To uncover regional differences in media framing, I applied several analytical methods, each tailored to address specific aspects of the research question. Keyword frequency analysis was employed to identify the most emphasized terms in U.S. and European articles. Using TF-IDF (Term Frequency-Inverse Document Frequency), I extracted keywords that stood out in the cleaned text. This method allowed me to pinpoint regional priorities. I also was able visualise these results through bar charts, which provided a clear comparison of keyword importance between the two regions.
+I also conducted bigram co-occurrence analysis to examine relationships between frequently paired terms, which helped me uncover narrative patterns within the media coverage. Using CountVectorizer to extract bigrams and NetworkX to create weighted graphs, I visualized these relationships to illustrate thematic clusters. This analysis provided deeper insight into how media narratives in each region were constructed.
+
+To further explore regional differences, I used Latent Dirichlet Allocation (LDA) for topic modeling. This method helped me identify dominant themes within U.S. and European articles, offering a higher-level view of their focus areas. U.S. articles were found to center on financial transactions, competitiveness, and shareholder value, reflecting the country’s business-centric culture. European articles, on the other hand, focused on regulatory scrutiny, industrial impacts, and market stability, aligning with the stricter regulatory environment in the region. Topic modeling not only validated the findings from keyword and bigram analyses but also provided a more nuanced understanding of regional priorities.
+
+Finally, I generated word clouds to visually represent the most frequent terms in each region. These word clouds served as a quick yet impactful way to highlight the distinct language tones and thematic focuses of U.S. and European media. By emphasizing dominant keywords in a visual format, the word clouds reinforced the conclusions drawn from other analyses.
+
+The results themselves are linked here: 
+
+
+### Possible Interpretation of the Results
+
+### Limitations
+
+### Conclusion 
